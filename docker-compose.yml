@@ -1,0 +1,79 @@
+services:
+  db:
+    image: postgres:15-alpine
+    # restart: always
+    networks:
+      - app-network
+    environment:
+      POSTGRES_USER: dev_user
+      POSTGRES_PASSWORD: dev_password
+      POSTGRES_DB: dev_db
+    ports:
+      - "5432:5432" # So you can connect with GUI like TablePlus
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Keep db data persistent over container shutdown & restart
+  
+  valkey-service:
+    image: docker.io/valkey/valkey:latest
+    container_name: valkey_session_store
+    command: valkey-server --protected-mode no
+    networks:
+      - app-network
+    # Expose is used internally within the container network. 
+    # Port 6379 is NOT published to your host machine for security.
+    expose:
+      - "6379"
+    volumes:
+      - valkey_data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 5  
+
+  frontend:
+    build:
+      context: ./simple_frontend
+      dockerfile: Dockerfile
+    container_name: simple_frontend_container
+    # restart: always
+    ports:
+      - "8080:8080" # HTTP
+      - "8443:8443" # HTTPS
+    networks:
+      - app-network
+    depends_on:
+      - backend
+    volumes:
+      - ./self-signed-ssl/cert.pem:/etc/nginx/certs/default.crt:ro
+      - ./self-signed-ssl/key.pem:/etc/nginx/certs/default.key:ro
+
+  backend:
+    build:
+      context: ./simple_backend
+      dockerfile: Dockerfile
+    container_name: simple_backend_container
+    # restart: always
+    volumes:
+      - ./simple_backend:/app # Bind Mounts
+      - /app/node_modules # Anonymous volume keeps these folders seperate from coding environment
+    # We don't need to map ports to the host if only Nginx needs to talk to it
+    expose:
+      - "5000"
+    environment:
+      - PORT=5000
+      - DATABASE_URL=postgres://dev_user:dev_password@db:5432/dev_db
+      - VALKEY_URL=redis://valkey-service:6379
+    networks:
+      - app-network
+    depends_on:
+      - db
+      - valkey-service
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  valkey_data:
