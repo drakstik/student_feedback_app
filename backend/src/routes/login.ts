@@ -40,7 +40,11 @@ router.post("/", validateLogin, async (req: Request, res: Response) => {
         establishSession(
             req,
             res,
-            { id: user.get('id') as string, username: user.get('username') as string },
+            {
+                id: user.get('id') as string,
+                username: user.get('username') as string,
+                role: user.get('role') as "student" | "teacher"
+            },
             200,
             "Login successful"
         );
@@ -58,5 +62,6 @@ declare module 'express-session' {
         userId: string;
         username: string;
         isMfaVerified: boolean;
+        role: 'student' | 'teacher';
     }
 }

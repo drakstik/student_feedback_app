@@ -12,7 +12,12 @@ import registerRoute from './routes/register.js';
 import { helloRoute } from './routes/hello.js';
 import loginRoute from './routes/login.js';
 import logoutRoute from './routes/logout.js';
-
+import initFeedbackModel from "./models/feedback.js";
+import { requireRole } from "./middleware/rbac.js";
+import meRoute from './routes/me.js';
+import feedbackRoute from './routes/feedback.js';
+import getMyFeedbackRoute from './routes/getMyFeedbacks.js';
+import getAllFeedbackRoute from './routes/getAllFeedbacks.js';
 
 dotenv.config();
 
@@ -20,7 +25,6 @@ dotenv.config();
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
 // const SequelizeStore = ConnectSessionSequelize(session.Store); // Constructor
-const router = express.Router();
 
 // Only parses json and only looks at requests where the Content-Type header matches the type option.
 app.use(express.json());
@@ -35,9 +39,9 @@ app.use((req, res, next) => {
 
 // Initialize the database connection
 const sequelize = new Sequelize(
-    process.env.DB_NAME || "dev_db",
-    process.env.DB_USER || "dev_user",
-    process.env.DB_PASSWORD || "dev_password",
+    process.env.POSTGRES_DB || "dev_db",
+    process.env.POSTGRES_USER || "dev_user",
+    process.env.POSTGRES_PASSWORD || "dev_password",
     {
         host: process.env.DB_HOSTNAME || 'db', // or your DB host
         dialect: 'postgres'
@@ -46,6 +50,9 @@ const sequelize = new Sequelize(
 // 2. IMPORTANT: Initialize the model
 // This runs User.init() inside your model file
 initUserModel(sequelize, DataTypes);
+initFeedbackModel(sequelize, DataTypes);
+
+
 
 
 // 1. Initialize the Valkey/Redis client
@@ -87,6 +94,7 @@ app.use(
             secure: true,                     // Requires HTTPS (MUST be true in production)
             sameSite: 'strict',               // Protects against CSRF attacks
             maxAge: 72 * 60 * 60 * 1000,      // Cookie expires in 3 days
+            path: '/',
         },
     })
 );
@@ -98,9 +106,12 @@ app.use(
 // data may be dropped. To rename tables and other complex model changes, use migration files. 
 await sequelize.sync({ alter: true });
 
+/*------------Session identity check-------------*/
+app.use("/api/me", meRoute);                   // Must be before all other routes
+
 
 /*------------Example message from backend-----------*/
-app.get("/api/hello_backend", helloRoute);
+app.get("/api/hello_backend", requireRole(['student', 'teacher']), helloRoute);
 
 /*------------User registration logic-------------*/
 app.use("/api/register", registerRoute);
@@ -121,7 +132,14 @@ app.use("/api/login", loginLimiter, loginRoute); // Protect login route with rat
 app.use("/api/logout", logoutRoute); // Mount the secure logout endpoint
 
 
-//
+/*------------Feedback submission-------------*/
+app.use("/api/feedback", feedbackRoute);
+
+/*------------Student Feedback retrieval--------------*/
+app.use("/api/getMyFeedback", getMyFeedbackRoute);
+
+/*------------Teacher Feedback retrieval--------------*/
+app.use("/api/getAllFeedback", getAllFeedbackRoute);
 
 
 // Start Express listener server

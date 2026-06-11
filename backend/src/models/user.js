@@ -9,6 +9,7 @@ import argon2 from 'argon2';
  * @property {string|null} username
  * @property {string} password
  * @property {string} phoneNumber
+ * @property {'student'|'teacher'} role
  */
 
 /**
@@ -60,8 +61,9 @@ export default (sequelize, DataTypes) => {
       username: {
         type: DataTypes.STRING,
         allowNull: false,
+        unique: true,
         set(val) {
-          // Automatically stores everything in lowercase in PostgreSQL
+          // Automatically stores usernames in lowercase in PostgreSQL
           this.setDataValue('username', val.toLowerCase().trim());
         }
       },
@@ -73,6 +75,10 @@ export default (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
         unique: true,
+      },
+      role: {
+        type: DataTypes.ENUM('student', 'teacher'),
+        allowNull: false,
       }
     },
     {

@@ -1,1 +1,1 @@
-declare module 'connect-session-sequelize';
+// declare module 'connect-session-sequelize';

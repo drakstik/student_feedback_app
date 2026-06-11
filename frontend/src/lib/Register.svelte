@@ -1,37 +1,41 @@
 <script lang="ts">
+    let { onSuccess } = $props();
+
     let dialog: HTMLDialogElement;
-    let username = "";
-    let password = "";
-    let phoneNumber = "";
-    let loading = false;
+
+    let username = $state("");
+    let password = $state("");
+    let phoneNumber = $state("");
+    let role = $state("student"); // Initialize role with least priviledged user type by default
+    let loading = $state(false);
 
     async function handleRegister() {
         // Basic client-side validation
-        if (!username || !password || !phoneNumber) {
+        if (!username || !password || !phoneNumber || !role) {
             return alert(
-                "Please enter a username, password, and phone number.",
+                "Please enter a username, password, phone number and role.",
             );
         }
-
         loading = true;
 
         try {
             const res = await fetch("/api/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, password, phoneNumber }),
+                body: JSON.stringify({ username, password, phoneNumber, role }),
             });
 
             const data = await res.json();
 
             if (res.ok) {
                 // Success: Alert the user and reset form
-                alert(
-                    `Successfully created new user with username: ${data.username}`,
-                );
-                username = "";
-                password = "";
-                phoneNumber = "";
+                alert(`Successfully created new user!`);
+                onSuccess({
+                    role: data.user.role,
+                    username: data.user.username,
+                });
+
+                // This triggers closeDialog() to clear inputs
                 dialog.close();
             } else {
                 // Error: Handle backend validation or server errors
@@ -53,17 +57,17 @@
         username = "";
         password = "";
         phoneNumber = "";
-        dialog.close();
+        role = "student";
     }
 </script>
 
 <!-- Trigger Button -->
-<button class="join-btn" on:click={() => dialog.showModal()}>
+<button class="join-btn" onclick={() => dialog.showModal()}>
     Become a Member
 </button>
 
 <!-- Modal Popup -->
-<dialog bind:this={dialog}>
+<dialog bind:this={dialog} onclose={closeDialog}>
     <div class="modal-content">
         <h3>Create an Account</h3>
 
@@ -94,11 +98,22 @@
             disabled={loading}
         />
 
+        <label for="reg-role">Account Type</label>
+        <select id="reg-role" bind:value={role} disabled={loading}>
+            <option value="student">Student</option>
+            <option value="teacher">Teacher</option>
+        </select>
+
         <div class="actions">
-            <button class="cancel" on:click={closeDialog} disabled={loading}>
+            <button
+                type="button"
+                class="cancel"
+                onclick={() => dialog.close()}
+                disabled={loading}
+            >
                 Cancel
             </button>
-            <button class="done" on:click={handleRegister} disabled={loading}>
+            <button class="done" onclick={handleRegister} disabled={loading}>
                 {loading ? "Creating..." : "Done"}
             </button>
         </div>
@@ -130,6 +145,13 @@
         color: #666;
     }
     input {
+        padding: 0.6rem;
+        width: 280px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+    input,
+    select {
         padding: 0.6rem;
         width: 280px;
         border: 1px solid #ccc;

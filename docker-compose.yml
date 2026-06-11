@@ -33,9 +33,9 @@ services:
 
   frontend:
     build:
-      context: ./simple_frontend
+      context: ./frontend
       dockerfile: Dockerfile
-    container_name: simple_frontend_container
+    container_name: frontend_container
     # restart: always
     ports:
       - "8080:8080" # HTTP
@@ -50,12 +50,12 @@ services:
 
   backend:
     build:
-      context: ./simple_backend
+      context: ./backend
       dockerfile: Dockerfile
-    container_name: simple_backend_container
+    container_name: backend_container
     # restart: always
     volumes:
-      - ./simple_backend:/app # Bind Mounts
+      - ./backend:/app # Bind Mounts
       - /app/node_modules # Anonymous volume keeps these folders seperate from coding environment
     # We don't need to map ports to the host if only Nginx needs to talk to it
     expose:

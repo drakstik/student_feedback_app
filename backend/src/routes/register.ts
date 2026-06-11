@@ -40,6 +40,11 @@ export const ValidateFormat = [
         })
         .withMessage('Password must be at least 12 characters long and include an uppercase letter, lowercase letter, number, and symbol.'),
 
+    body('role')
+        .trim()
+        .isIn(['student', 'teacher'])
+        .withMessage('Role must be either student or teacher'),
+
     // 4. Handle Express-Validator output cleanly
     (req: Request, res: Response, next: NextFunction) => {
         const errors = validationResult(req);
@@ -55,7 +60,7 @@ export const ValidateFormat = [
 // User registration endpoint
 router.post("/", ValidateFormat, async (req: Request, res: Response) => {
     try {
-        const { username, password, phoneNumber } = req.body;
+        const { username, password, phoneNumber, role } = req.body;
 
         const existingUser = await User.findOne({ where: { phoneNumber } });
         if (existingUser) {
@@ -63,13 +68,17 @@ router.post("/", ValidateFormat, async (req: Request, res: Response) => {
         }
 
         // Create the user
-        const newUser = await User.create({ username, password, phoneNumber });
+        const newUser = await User.create({ username, password, phoneNumber, role });
 
         // Streamline auth using the utility helper
         establishSession(
             req,
             res,
-            { id: newUser.get('id') as string, username: newUser.get('username') as string },
+            {
+                id: newUser.get('id') as string,
+                username: newUser.get('username') as string,
+                role: newUser.get('role') as 'student' | 'teacher'
+            },
             201,
             "Registration and login successful"
         );

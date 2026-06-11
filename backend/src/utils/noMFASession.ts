@@ -3,6 +3,16 @@ import type { Request, Response } from "express";
 interface SessionUser {
     id: string;
     username: string;
+    role: 'student' | 'teacher';
+}
+
+declare module 'express-session' {
+    interface SessionData {
+        userId: string;
+        username: string;
+        isMfaVerified: boolean;
+        role: 'student' | 'teacher';
+    }
 }
 
 /**
@@ -37,6 +47,7 @@ export const establishSession = (
         req.session.userId = user.id;
         req.session.username = user.username;
         req.session.isMfaVerified = false; // Keep MFA logic consistent
+        req.session.role = user.role;
 
         // 3. Force the store (Valkey) to persist data before responding
         req.session.save((saveErr) => {
@@ -56,7 +67,7 @@ export const establishSession = (
             // 4. Return unified successful response structure
             res.status(successStatusCode).json({
                 message: successMessage,
-                user: { username: user.username }
+                user: { username: user.username, role: user.role }
             });
         });
     });
